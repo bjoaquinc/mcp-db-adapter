@@ -1,4 +1,4 @@
-# Security-First MCP Adapter
+# Security-First MCP Database Adapter
 
 A lightweight, open-source connector stub written in **TypeScript** that **leverages AI** to auto-discover database connections in any JavaScript, Python, or SQL project and spins up a **local MCP gateway**. Expose two core tools—**safe\_execute** and **schema\_validation**—feeding AI coding assistants (Cursor, Windsurf, Void, Continue) with **real-time, schema-aware** database insights.
 
