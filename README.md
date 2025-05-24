@@ -31,7 +31,7 @@ Add the adapter to your `mcp.json` under `mcpServers`, supplying your database U
 ```json
 {
   "mcpServers": {
-    "securityFirstDb": {
+    "mcp-db-adapter": {
       "command": "npx",
       "args": [
         "-y",
