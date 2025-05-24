@@ -35,9 +35,8 @@ Add the adapter to your `mcp.json` under `mcpServers`, supplying your database U
       "command": "npx",
       "args": [
         "-y",
-        "security-first-mcp-adapter",
-        "postgresql://user:password@host:5432/mydb",
-        "--port", "6000"
+        "mcp-db-adapter",
+        "--port 6000"
       ]
     }
   }
@@ -47,7 +46,7 @@ Add the adapter to your `mcp.json` under `mcpServers`, supplying your database U
 To launch, use your IDE or CLI that reads from `mcp.json` (e.g., VS Code MCP extension). Alternatively, run directly:
 
 ```bash
-npx -y security-first-mcp-adapter postgresql://user:password@host:5432/mydb --port 6000
+npx -y mcp-db-adapter --port 6000
 ```
 
 This will start the local MCP gateway on port `6000`, auto-discover your connection via AI-driven parsing, verify reachability, and register `safe_execute` & `schema_validation`.
