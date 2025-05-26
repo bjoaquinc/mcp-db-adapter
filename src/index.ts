@@ -1,60 +1,22 @@
-import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { DatabaseStateJsonSchema } from "./state-manager/StateManagerSchemas.js";
-import { createMCPServer } from "./server/server.js";
-import { z } from "zod";
+import { connectToTransport, createMCPServer } from "./server/server.js";
+import { ToolManager } from "./tool-manager/ToolManager.js";
+import { createAddDatabaseTool } from "./tool-manager/AddDatabaseTool.js";
+import { StateManager } from "./state-manager/StateManager.js";
 
 const initalize = async () => {
-  const serverConfig = {
-      name: "Database Adapter",
-      version: "0.1.0",
-  }
-
-  const serverOptions = {}
 
   // Create a new server instance
   const server = await createMCPServer()
 
-  // Add an addition tool
-  server.tool("add_db_config",
-    DatabaseStateJsonSchema,
-    async (configObject) => {
-      console.log("Received config object:", configObject);
-      return {
-          content: [{
-            type: "text",
-            text: `Added database config for ${configObject.name} with engine ${configObject.engine}`,
-          }],
-      }
-    }
-  );
+  // Set state
+  const stateManager = new StateManager();
 
-  server.tool("add",
-      { a: z.number(), b: z.number() },
-      async ({ a, b }) => ({
-        content: [{ type: "text", text: String(a + b) }]
-      })
-  );
+  // Set tools
+  const toolManager = new ToolManager(server);
+  toolManager.addTool(createAddDatabaseTool(stateManager))
 
-  // Add a dynamic greeting resource
-  // server.resource(
-  //   "greeting",
-  //   new ResourceTemplate("greeting://{name}", { list: undefined }),
-  //   async (uri, { name }) => ({
-  //     contents: [{
-  //       uri: uri.href,
-  //       text: `Hello, ${name}!`
-  //     }]
-  //   })
-  // );
-
-  // Start receiving messages on stdin and sending messages on stdout
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-
-  return server;
+  // Connect to Stdio transport
+  await connectToTransport(server);
 }
 
-const server = await initalize()
-
-export default server;
+await initalize()
