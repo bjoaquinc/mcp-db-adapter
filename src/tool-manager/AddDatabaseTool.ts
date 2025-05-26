@@ -1,7 +1,9 @@
 import type { ToolDefinition } from "./ToolManager.js";
 import type { StateManager } from "../state-manager/StateManager.js";
-import { MySQLConfigSchema } from "../engines/mysql.js";
-import { SQLiteConfigSchema } from "../engines/sqlite.js";
+import { MySQLConfigSchema, checkMySqlConnection } from "../engines/mysql.js";
+import { SQLiteConfigSchema, checkSqliteConnection } from "../engines/sqlite.js";
+import type { MySQLConfig } from "../engines/mysql.js";
+import type { SQLiteConfig } from "../engines/sqlite.js";
 import { z } from "zod";
 
 const AddDatabaseSchema = {
@@ -12,27 +14,59 @@ const AddDatabaseSchema = {
   ]),
 };
 
+type DBConfigsWithoutType = MySQLConfig | SQLiteConfig
+
+
+
 export function createAddDatabaseTool(stateManager: StateManager) {
-    return {
-      name: "add_db_config",
-      description: "Add a database config",
-      inputSchema: AddDatabaseSchema,
-      handler: async (configObject) => {
-        const { name, config } = configObject;
-        const { type, ...rest } = config;
-        // TODO:!!! Test if database is accessible
-        stateManager.setDatabase(name, {
-            name,
-            engine: type,
-            config: rest,
-            schemas: {}, // Initially empty, will load the schema later lazily
-        });
+  return {
+    name: "add_db_config",
+    description: "Add a database config",
+    inputSchema: AddDatabaseSchema,
+    handler: async (configObject) => {
+      const { name, config } = configObject;
+      const { type, ...rest } = config;
+      
+      // Check connection
+      const isConnected = checkDbConnection(name, config)
+
+      if (!isConnected) {
+        // Return an error object
         return {
           content: [{
-            type: "text",
-            text: `Added database config for ${configObject.name}`,
+            type: 'text',
+            text: `Failed to connect to database ${name} with the following config: ${JSON.stringify(config, null, 2)}`
           }],
-        };
-      },
-    } as ToolDefinition<typeof AddDatabaseSchema>;
+          isError: true,
+        }
+      }
+
+      stateManager.setDatabase(name, {
+          name,
+          engine: type,
+          config: rest,
+          schemas: {}, // Initially empty, will load the schema later lazily
+      });
+      return {
+        content: [{
+          type: "text",
+          text: `Added database config for ${configObject.name}`,
+        }],
+      };
+    },
+  } as ToolDefinition<typeof AddDatabaseSchema>;
+}
+
+const checkDbConnection = async (dbName: string, config: DBConfigsWithoutType): Promise<boolean>  => {
+  let response = false
+
+  if (config.type === 'mysql') {
+    response = await checkMySqlConnection(dbName, config)
   }
+
+  if (config.type === 'sqlite') {
+    response = await checkSqliteConnection(dbName, config)
+  }
+
+  return response
+}

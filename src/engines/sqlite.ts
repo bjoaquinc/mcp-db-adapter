@@ -14,7 +14,7 @@ export interface SQLiteConfig {
   type: 'sqlite';
 }
 
-export const checkSqliteConnection = async (dbName: string, config: Omit<SQLiteConfig, 'type'>): Promise<boolean> => {
+export const checkSqliteConnection = async (dbName: string, config: SQLiteConfig): Promise<boolean> => {
   const mode = config.readonly
     ? sqlite3.OPEN_READONLY
     : sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE;
