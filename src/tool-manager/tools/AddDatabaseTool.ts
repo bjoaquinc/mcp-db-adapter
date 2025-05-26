@@ -1,9 +1,9 @@
-import type { ToolDefinition } from "./ToolManager.js";
-import type { StateManager } from "../state-manager/StateManager.js";
-import { MySQLConfigSchema, checkMySqlConnection } from "../engines/mysql.js";
-import { SQLiteConfigSchema, checkSqliteConnection } from "../engines/sqlite.js";
-import type { MySQLConfig } from "../engines/mysql.js";
-import type { SQLiteConfig } from "../engines/sqlite.js";
+import type { ToolDefinition } from "../ToolManager.js";
+import type { StateManager } from "../../state-manager/StateManager.js";
+import { MySQLConfigSchema, checkMySqlConnection } from "../../engines/mysql.js";
+import { SQLiteConfigSchema, checkSqliteConnection } from "../../engines/sqlite.js";
+import type { MySQLConfig } from "../../engines/mysql.js";
+import type { SQLiteConfig } from "../../engines/sqlite.js";
 import { z } from "zod";
 
 const AddDatabaseSchema = {
@@ -14,7 +14,7 @@ const AddDatabaseSchema = {
   ]),
 };
 
-type DBConfigsWithoutType = MySQLConfig | SQLiteConfig
+type DBConfig = MySQLConfig | SQLiteConfig
 
 
 
@@ -28,7 +28,7 @@ export function createAddDatabaseTool(stateManager: StateManager) {
       const { type, ...rest } = config;
       
       // Check connection
-      const isConnected = checkDbConnection(name, config)
+      const isConnected = await checkDbConnection(name, config)
 
       if (!isConnected) {
         // Return an error object
@@ -41,12 +41,15 @@ export function createAddDatabaseTool(stateManager: StateManager) {
         }
       }
 
+      // Add the database to state
       stateManager.setDatabase(name, {
           name,
           engine: type,
           config: rest,
           schemas: {}, // Initially empty, will load the schema later lazily
       });
+
+      // Return success message
       return {
         content: [{
           type: "text",
@@ -57,8 +60,8 @@ export function createAddDatabaseTool(stateManager: StateManager) {
   } as ToolDefinition<typeof AddDatabaseSchema>;
 }
 
-const checkDbConnection = async (dbName: string, config: DBConfigsWithoutType): Promise<boolean>  => {
-  let response = false
+const checkDbConnection = async (dbName: string, config: DBConfig): Promise<boolean>  => {
+  let response = false // fails by default
 
   if (config.type === 'mysql') {
     response = await checkMySqlConnection(dbName, config)

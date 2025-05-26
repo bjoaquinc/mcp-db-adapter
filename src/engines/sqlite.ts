@@ -35,7 +35,7 @@ export const checkSqliteConnection = async (dbName: string, config: SQLiteConfig
     return true;
   } catch (err) {
     // Log once, return false so callers can decide how noisy to be
-    console.error(`[${dbName}] SQLite handshake failed:`, err);
+    // console.error(`[${dbName}] SQLite handshake failed:`, err);
     return false;
   }
 }

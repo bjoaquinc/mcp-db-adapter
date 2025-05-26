@@ -44,7 +44,7 @@ export const checkMySqlConnection = async (
     await conn.end();
     return true;
   } catch (err) {
-    console.error(`[${dbName}] MySQL handshake failed:`, err);
+    // console.error(`[${dbName}] MySQL handshake failed:`, err);
     if (conn) await conn.end().catch(() => void 0);
     return false;
   }
