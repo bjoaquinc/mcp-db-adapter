@@ -1,3 +1,4 @@
+import mysql from "mysql2/promise"
 import z from "zod";
 
 export const MySQLConfigSchema = z.object({
@@ -17,3 +18,36 @@ export interface MySQLConfig {
   password: string;
   database: string;
 }
+
+export const checkMySqlConnection = async (
+  dbName: string,
+  config: Omit<MySQLConfig, 'type'>,
+): Promise<boolean> => {
+  let conn: mysql.Connection | undefined;
+
+  try {
+    // 1) Open
+    conn = await mysql.createConnection({
+      host: config.host,
+      port: config.port,
+      user: config.user,
+      password: config.password,
+      database: config.database,
+      // keep it snappy — tweak if you expect slow networks
+      connectTimeout: 5_000,
+    });
+
+    // 2) Ping with the lightest-weight query possible
+    await conn.query('SELECT 1');
+
+    // 3) Clean shutdown
+    await conn.end();
+    return true;
+  } catch (err) {
+    console.error(`[${dbName}] MySQL handshake failed:`, err);
+    if (conn) await conn.end().catch(() => void 0);
+    return false;
+  }
+};
+
+
