@@ -6,7 +6,6 @@ import type {
   TableState,
   ColumnMeta,
 } from './StateManagerTypes.js';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 
 /* ---------- Engine-specific configs ---------- */
 import { MySQLConfigSchema } from '../engines/mysql.js';
@@ -46,19 +45,16 @@ export const DatabaseStateSchema: z.ZodSchema<DatabaseState> = z.discriminatedUn
   z.object({
     name: z.string(),
     engine: z.literal('mysql'),
-    config: MySQLConfigSchema,
+    config: MySQLConfigSchema.omit({type: true}),
     schemas: z.record(SchemaStateSchema)
   }),
   z.object({
     name: z.string(),
     engine: z.literal('sqlite'),
-    config: SQLiteConfigSchema,
+    config: SQLiteConfigSchema.omit({type: true}),
     schemas: z.record(SchemaStateSchema)
   })
 ]);
-
-// Export JSON schema for the database state
-export const DatabaseStateJsonSchema = zodToJsonSchema(DatabaseStateSchema, 'DatabaseState');
 
 // Schema objects for tools (shape or raw shape no zod object)
 

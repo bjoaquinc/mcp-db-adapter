@@ -52,6 +52,6 @@ export interface TableStats  { rowCount: number;    sizeMB?: number;   }
 
 /**  Map each engine string literal to its own config type  */
 type EngineConfig<E extends DatabaseEngine> =
-    E extends 'mysql'  ? MySQLConfig  :
-    E extends 'sqlite' ? SQLiteConfig :
+    E extends 'mysql'  ? Omit<MySQLConfig, 'type'>  :
+    E extends 'sqlite' ? Omit<SQLiteConfig, 'type'> :
     never;

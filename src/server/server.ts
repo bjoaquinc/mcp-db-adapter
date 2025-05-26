@@ -1,4 +1,5 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
 const serverConfig = {
     name: "Database Adapter",
@@ -12,5 +13,11 @@ export const createMCPServer = async () => {
     const server = new McpServer(serverConfig, serverOptions);
 
     return server;
+}
+
+export const connectToTransport = async (server: McpServer) => {
+    // Start receiving messages on stdin and sending messages on stdout
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
 }
 
