@@ -18,16 +18,12 @@ export class ToolManager {
     }
 
     public addTool<T extends ZodRawShape>(toolDef: ToolDefinition<T>): void {
-        try {
-            const {name, description, inputSchema, outputSchema, handler} = toolDef
-            this.server.registerTool(name, {
-                inputSchema,
-                outputSchema,
-                description,
-            }, handler)
-            this.registeredTools.add(toolDef.name);
-        } catch (error) {
-            // handle/log if you like
-        }
+        const {name, description, inputSchema, outputSchema, handler} = toolDef
+        this.server.registerTool(name, {
+            inputSchema,
+            outputSchema,
+            description,
+        }, handler)
+        this.registeredTools.add(toolDef.name);
     }
 }
