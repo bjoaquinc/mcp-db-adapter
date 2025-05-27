@@ -26,10 +26,11 @@ export function createAddDatabaseTool(stateManager: StateManager) {
     inputSchema: AddDatabaseSchema,
     handler: async (configObject) => {
       const { name, config } = configObject;
-      const { type, ...rest } = config;
       
       // Check connection
       const isConnected = await checkDbConnection(name, config)
+
+      console.error(`is server connected: ${isConnected}`)
 
       if (!isConnected) {
         // Return an error object
@@ -38,6 +39,7 @@ export function createAddDatabaseTool(stateManager: StateManager) {
       }
 
       // Add the database to state
+      const { type, ...rest } = config;
       stateManager.setDatabase(name, {
           name,
           engine: type,

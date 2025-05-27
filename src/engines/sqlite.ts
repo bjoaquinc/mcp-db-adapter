@@ -1,23 +1,30 @@
 import { open } from 'sqlite';
 import sqlite3 from 'sqlite3';
 import z from "zod";
+import fs from 'fs';
 
 export const SQLiteConfigSchema = z.object({
-  file: z.string(),           // allow ':memory:'
+  file: z.string(),
   readonly: z.boolean().optional(),
   type: z.literal('sqlite'),
 });
 
 export interface SQLiteConfig {
-  file: string;          // absolute path or `:memory:`
+  file: string;
   readonly?: boolean;
   type: 'sqlite';
 }
 
 export const checkSqliteConnection = async (dbName: string, config: SQLiteConfig): Promise<boolean> => {
+
+  if (!fs.existsSync(config.file)) {
+    // database doesnt exist
+    return false;
+  }
+
   const mode = config.readonly
     ? sqlite3.OPEN_READONLY
-    : sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE;
+    : sqlite3.OPEN_READWRITE;
       
   try {
     // 3) Open & ping
