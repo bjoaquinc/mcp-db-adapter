@@ -5,6 +5,7 @@ import { SQLiteConfigSchema, checkSqliteConnection } from "../../engines/sqlite.
 import type { MySQLConfig } from "../../engines/mysql.js";
 import type { SQLiteConfig } from "../../engines/sqlite.js";
 import { z } from "zod";
+import { McpError } from "@modelcontextprotocol/sdk/types.js";
 
 const AddDatabaseSchema = {
   name: z.string(),
@@ -32,13 +33,8 @@ export function createAddDatabaseTool(stateManager: StateManager) {
 
       if (!isConnected) {
         // Return an error object
-        return {
-          content: [{
-            type: 'text',
-            text: `Failed to connect to database ${name} with the following config: ${JSON.stringify(config, null, 2)}`
-          }],
-          isError: true,
-        }
+        const errMessage = `Failed to connect to database ${name}`
+        throw new McpError(321004, errMessage, config)
       }
 
       // Add the database to state

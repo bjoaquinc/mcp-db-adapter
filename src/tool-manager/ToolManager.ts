@@ -17,8 +17,6 @@ export class ToolManager {
         this.server = server;
     }
 
-    
-
     public addTool<T extends ZodRawShape>(toolDef: ToolDefinition<T>): void {
         const {name, description, inputSchema, outputSchema, handler} = toolDef
         
