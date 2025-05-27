@@ -15,7 +15,7 @@ export interface SQLiteConfig {
   type: 'sqlite';
 }
 
-export const checkSqliteConnection = async (dbName: string, config: SQLiteConfig): Promise<boolean> => {
+export const checkSqliteConnection = async (config: SQLiteConfig): Promise<boolean> => {
 
   if (!fs.existsSync(config.file)) {
     // database doesnt exist

@@ -28,7 +28,7 @@ export function createAddDatabaseTool(stateManager: StateManager) {
       const { name, config } = configObject;
       
       // Check connection
-      const isConnected = await checkDbConnection(name, config)
+      const isConnected = await checkDbConnection(config)
 
       console.error(`is server connected: ${isConnected}`)
 
@@ -58,15 +58,15 @@ export function createAddDatabaseTool(stateManager: StateManager) {
   } as ToolDefinition<typeof AddDatabaseSchema>;
 }
 
-const checkDbConnection = async (dbName: string, config: DBConfig): Promise<boolean>  => {
+const checkDbConnection = async (config: DBConfig): Promise<boolean>  => {
   let response = false // fails by default
 
   if (config.type === 'mysql') {
-    response = await checkMySqlConnection(dbName, config)
+    response = await checkMySqlConnection(config)
   }
 
   if (config.type === 'sqlite') {
-    response = await checkSqliteConnection(dbName, config)
+    response = await checkSqliteConnection(config)
   }
 
   return response

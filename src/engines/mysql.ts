@@ -20,7 +20,6 @@ export interface MySQLConfig {
 }
 
 export const checkMySqlConnection = async (
-  dbName: string,
   config: MySQLConfig,
 ): Promise<boolean> => {
   let conn: mysql.Connection | undefined;
