@@ -35,7 +35,7 @@ export function createAddDatabaseTool(stateManager: StateManager) {
       if (!isConnected) {
         // Return an error object
         const errMessage = `Failed to connect to database ${name}`
-        throw new McpError(321004, errMessage, config)
+        throw new McpError(32001, errMessage, config)
       }
 
       // Add the database to state
