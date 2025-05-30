@@ -17,4 +17,8 @@ export class StateManager {
   removeState(key: string) {
     delete this.state.dbs[key];
   }
+
+  getDatabaseNames(): string[] {
+    return Object.keys(this.state.dbs);
+  }
 }
