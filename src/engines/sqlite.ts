@@ -16,6 +16,8 @@ export interface SQLiteConfig {
   type: 'sqlite';
 }
 
+export const DEFAULT_SQLITE_SCHEMA_NAME = 'main'
+
 export const checkSqliteConnection = async (config: SQLiteConfig): Promise<boolean> => {
 
   if (!fs.existsSync(config.file)) {
@@ -113,7 +115,7 @@ export const getSqliteSchema = async (config: SQLiteConfig): Promise<SchemaState
     }
 
     return {
-      name: 'main', // SQLite default schema name
+      name: DEFAULT_SQLITE_SCHEMA_NAME,
       tables,
       stats: {
         totalTables: tablesResult.length,
