@@ -2,6 +2,7 @@ import { connectToTransport, createMCPServer } from "./server/server.js";
 import { ToolManager } from "./tool-manager/ToolManager.js";
 import { createAddDatabaseTool } from "./tool-manager/tools/AddDatabaseTool.js";
 import { StateManager } from "./state-manager/StateManager.js";
+import { createIntrospectSchemaTool } from "./tool-manager/tools/IntrospectSchemaTool.js";
 
 const initalize = async () => {
 
@@ -15,6 +16,7 @@ const initalize = async () => {
     // create new tool manager and add tools
     const toolManager = new ToolManager(server);
     toolManager.addTool(createAddDatabaseTool(stateManager))
+    toolManager.addTool(createIntrospectSchemaTool(stateManager))
 
     // connect to transport
     await connectToTransport(server);
