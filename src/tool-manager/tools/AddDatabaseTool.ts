@@ -7,6 +7,25 @@ import type { SQLiteConfig } from "../../engines/sqlite.js";
 import { z } from "zod";
 import { McpError } from "@modelcontextprotocol/sdk/types.js";
 
+const DESCRIPTION = `Add and configure a new database connection for SQL queries and data operations.
+
+This tool establishes a secure connection to MySQL or SQLite databases, validates the connection, 
+and makes the database available for subsequent query operations.
+
+@param {string} name - Unique identifier for this database connection
+@param {object} config - Database configuration object with type-specific connection details
+
+For MySQL databases:
+- Requires: host, port, user, password, and database name
+- Example: { type: "mysql", host: "localhost", port: 3306, user: "admin", password: "secret", database: "myapp" }
+
+For SQLite databases:
+- Requires: file path to the database file
+- Example: { type: "sqlite", path: "/path/to/database.db" }
+
+The tool will test the connection before adding it to ensure it's accessible and properly configured.
+Once successfully added, the database can be referenced by its name in other database operations.`;
+
 const AddDatabaseSchema = {
   name: z.string(),
   config: z.union([
@@ -22,7 +41,7 @@ type DBConfig = MySQLConfig | SQLiteConfig
 export function createAddDatabaseTool(stateManager: StateManager) {
   return {
     name: "add_db_config",
-    description: "Add a database config",
+    description: DESCRIPTION,
     inputSchema: AddDatabaseSchema,
     handler: async (configObject) => {
       const { name, config } = configObject;
