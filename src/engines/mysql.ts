@@ -1,6 +1,8 @@
 import mysql from "mysql2/promise"
 import z from "zod";
 import { ColumnMeta, SchemaState, TableState } from "../state-manager/StateManagerTypes.js";
+import { DatabaseSafetyConfig, isSafeSQLQuery } from "../utils/safety.js";
+import { McpError } from "@modelcontextprotocol/sdk/types.js";
 
 export const MySQLConfigSchema = z.object({
   type: z.literal('mysql'),
@@ -18,6 +20,18 @@ export interface MySQLConfig {
   user: string;
   password: string;
   database: string;
+}
+
+export interface MySQLQueryResult {
+  success: boolean;
+  rows: any[];
+  columns: {
+    name: string;
+    type: number;
+    table: string;
+  }[];
+  rowCount: number;
+  error?: string;
 }
 
 export const checkMySqlConnection = async (
@@ -149,3 +163,87 @@ export const getMySqlSchema = async (config: MySQLConfig): Promise<SchemaState> 
     }
   }
 };
+
+export const mysqlSafetyConfig: DatabaseSafetyConfig = {
+  dangerousPatterns: [
+    // File operations
+    /\binto\s+outfile\b/,
+    /\binto\s+dumpfile\b/,
+    /\bload_file\b/,
+    
+    // Locking operations
+    /\bfor\s+update\b/,
+    /\block\s+in\s+share\s+mode\b/,
+    
+    // Variable assignments
+    /\binto\s+@/,
+    
+    // Stored procedures
+    /\bcall\b/,
+    /\bexec\b/,
+    /\bexecute\b/,
+  ],
+  dangerousKeywords: [
+    'benchmark',
+    'sleep',
+  ],
+  maxNestedDepth: 8, // MySQL-specific limit
+};
+
+export const isMySQLQuerySafe = (query: string): boolean => {
+  return isSafeSQLQuery(query, mysqlSafetyConfig);
+};
+
+export const executeMySQLQuery = async (query: string, config: MySQLConfig): Promise<MySQLQueryResult> => {
+
+  let conn: mysql.Connection | undefined;
+
+  try {
+    // Create connection
+    conn = await mysql.createConnection({
+      host: config.host,
+      port: config.port,
+      user: config.user,
+      password: config.password,
+      database: config.database,
+      connectTimeout: 10_000,
+      // Set additional safety options
+      multipleStatements: false, // Prevent multiple statement execution
+    });
+
+    // Execute the query with a timeout
+    const [rows, fields] = await Promise.race([
+      conn.query(query),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Query timeout after 30 seconds')), 30_000)
+      )
+    ]) as [any[], mysql.FieldPacket[]];
+
+    // Format the results
+    return {
+      success: true,
+      rows: rows || [],
+      columns: fields?.map(field => ({
+        name: field.name,
+        type: field.type ?? 0, // Default to 0 if type is undefined
+        table: field.table,
+      })) || [],
+      rowCount: Array.isArray(rows) ? rows.length : 0,
+    };
+
+  } catch (error) {
+    // Log the error (but don't expose sensitive details)
+    console.error('MySQL query execution failed:', error);
+    
+    throw new McpError(32003, `MySQL query execution failed: ${error instanceof Error ? error.message : 'Unknown error occurred'}`);
+  } finally {
+    // Always clean up the connection
+    if (conn) {
+      try {
+        await conn.end();
+      } catch (cleanupError) {
+        console.error('Error closing MySQL connection:', cleanupError);
+      }
+    }
+  }
+}
