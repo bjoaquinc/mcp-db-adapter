@@ -8,10 +8,10 @@ import type { MySQLConfig } from "../../engines/mysql.js";
 import { isSQLiteQuerySafe, executeSQLiteQuery } from "../../engines/sqlite.js";
 import type { SQLiteConfig } from "../../engines/sqlite.js";
 
-// Empty schema since this tool takes no parameters
 const SafeExecuteQuerySchema = {
     query: z.string(),
     databaseName: z.string(),
+    // TODO: add a query type: sql, javascript, python, etc.
 };
 
 type EnginConfigUnion = MySQLConfig | SQLiteConfig;
