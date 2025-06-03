@@ -8,6 +8,39 @@ import { z } from "zod";
 import { SchemaState } from "../../state-manager/StateManagerTypes.js";
 import { McpError } from "@modelcontextprotocol/sdk/types.js";
 
+const DESCRIPTION = `Analyze and retrieve the complete schema structure of a configured database.
+
+This tool performs database introspection to extract detailed schema information including
+tables, columns, data types, constraints, indexes, and relationships. The schema information
+is essential for understanding the database structure before writing queries.
+
+@param {string} name - Name of the configured database connection to introspect
+
+Schema Information Retrieved:
+- Table names and structures
+- Column names, data types, and constraints
+- Primary keys and foreign key relationships
+- Indexes and their configurations
+- Table metadata and statistics
+
+Database Support:
+- MySQL: Retrieves schema from the specified database name
+- SQLite: Analyzes the main database schema structure
+
+Returns:
+- Complete schema structure in JSON format
+- Organized by schema/database name for easy navigation
+- Detailed table and column information for query planning
+
+Use Cases:
+- Understand database structure before writing queries
+- Discover available tables and their relationships
+- Verify column names and data types
+- Plan complex queries involving multiple tables
+
+Example usage: Use this tool with name "my_database" to get the full schema structure
+before executing queries against that database.`;
+
 const IntrospectSchemaSchema = {
   name: z.string()
 };
@@ -19,7 +52,7 @@ type DBConfig = MySQLConfig | SQLiteConfig
 export function createIntrospectSchemaTool(stateManager: StateManager) {
   return {
     name: "introspect_schema",
-    description: "Analyze the schema of a database",
+    description: DESCRIPTION,
     inputSchema: IntrospectSchemaSchema,
     handler: async (request) => {
       const { name } = request;

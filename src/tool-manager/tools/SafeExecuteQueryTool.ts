@@ -8,6 +8,29 @@ import type { MySQLConfig } from "../../engines/mysql.js";
 import { isSQLiteQuerySafe, executeSQLiteQuery } from "../../engines/sqlite.js";
 import type { SQLiteConfig } from "../../engines/sqlite.js";
 
+const DESCRIPTION = `Execute a safe, read-only SQL query on a configured database connection.
+
+This tool performs secure database queries with built-in safety checks to prevent destructive operations.
+Only SELECT statements and other read-only operations are allowed. The tool automatically validates
+the query syntax and ensures it doesn't contain dangerous operations like INSERT, UPDATE, DELETE, or DROP.
+
+@param {string} query - The SQL query to execute (must be read-only)
+@param {string} databaseName - Name of the configured database connection to query against
+
+Query Safety Features:
+- Automatically validates query is read-only (SELECT statements only)
+- Prevents destructive operations (INSERT, UPDATE, DELETE, DROP, etc.)
+- Automatically adds LIMIT 100 to SELECT queries if no LIMIT is specified
+- Engine-specific safety validation for MySQL and SQLite
+
+Examples:
+- SELECT * FROM users WHERE active = 1
+- SELECT COUNT(*) FROM orders WHERE created_at > '2024-01-01'
+- SELECT name, email FROM customers ORDER BY created_at DESC
+
+The query results are returned in JSON format with row count information.
+Results are limited to 100 rows by default to prevent overwhelming the context window.`;
+
 const SafeExecuteQuerySchema = {
     query: z.string(),
     databaseName: z.string(),
@@ -19,18 +42,19 @@ type EnginConfigUnion = MySQLConfig | SQLiteConfig;
 export function createSafeExecuteQueryTool(stateManager: StateManager) {
   return {
     name: "safe_execute_query",
-    description: "Execute a read-only query on the database",
+    description: DESCRIPTION,
     inputSchema: SafeExecuteQuerySchema,
     handler: async (input) => {
         const { query, databaseName } = input;
 
         // Get the database from the state manager
         const database = stateManager.getDatabase(databaseName);
-        const { config, engine} = database;
 
         if (!database) {
             throw new McpError(32003, `Database ${databaseName} not found`);
         }
+
+        const { config, engine} = database;
 
         // Check if the query is safe
         const isSafe = isSafeQuery(query, engine);
