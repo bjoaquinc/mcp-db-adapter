@@ -3,6 +3,7 @@ import sqlite3 from 'sqlite3';
 import z from "zod";
 import fs from 'fs';
 import { ColumnMeta, SchemaState, TableState } from '../state-manager/StateManagerTypes.js';
+import { DatabaseSafetyConfig, isSafeSQLQuery } from "../utils/safety.js";
 
 export const SQLiteConfigSchema = z.object({
   file: z.string(),
@@ -37,7 +38,7 @@ export const checkSqliteConnection = async (config: SQLiteConfig): Promise<boole
       mode,
     });
 
-    // The cheapest “is-alive?” query you can do:
+    // The cheapest "is-alive?" query you can do:
     await db.get('PRAGMA quick_check;');
 
     // 4) Clean shutdown
@@ -127,3 +128,109 @@ export const getSqliteSchema = async (config: SQLiteConfig): Promise<SchemaState
     await db.close();
   }
 }
+
+export const sqliteSafetyConfig: DatabaseSafetyConfig = {
+  dangerousPatterns: [
+    // SQLite-specific functions that could be dangerous
+    /\breadfile\b/,
+    /\bwritefile\b/,
+    
+    // PRAGMA statements (could modify database settings)
+    /\bpragma\b/,
+    
+    // SQLite doesn't have traditional stored procedures, but has some functions
+    // that could be problematic if extensions are loaded
+    /\bload_extension\b/,
+    
+    // Vacuum and analyze can be resource intensive
+    /\bvacuum\b/,
+    /\banalyze\b/,
+  ],
+  dangerousKeywords: [
+    'attach',
+    'detach',
+  ],
+  maxNestedDepth: 12, // SQLite can handle more nesting than MySQL
+};
+
+export const isSQLiteQuerySafe = (query: string): boolean => {
+  return isSafeSQLQuery(query, sqliteSafetyConfig);
+};
+
+export interface SQLiteQueryResult {
+  success: boolean;
+  rows: any[];
+  columns: {
+    name: string;
+    type: string;
+  }[];
+  rowCount: number;
+  error?: string;
+}
+
+export const executeSQLiteQuery = async (query: string, config: SQLiteConfig): Promise<SQLiteQueryResult> => {
+  // First, validate the query for safety
+  if (!isSQLiteQuerySafe(query)) {
+    throw new Error('Query failed safety validation. Only safe SELECT queries are allowed.');
+  }
+
+  const mode = config.readonly
+    ? sqlite3.OPEN_READONLY
+    : sqlite3.OPEN_READWRITE;
+
+  let db: any = undefined;
+
+  try {
+    // Open database connection
+    db = await open({
+      filename: config.file,
+      driver: sqlite3.Database,
+      mode,
+    });
+
+    // Execute the query with a timeout
+    const rows = await Promise.race([
+      db.all(query),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Query timeout after 30 seconds')), 30_000)
+      )
+    ]) as any[];
+
+    // SQLite doesn't provide detailed column metadata like MySQL,
+    // so we'll extract column names from the first row
+    const columns = rows.length > 0 
+      ? Object.keys(rows[0]).map(name => ({
+          name,
+          type: 'TEXT', // SQLite is dynamically typed, so we default to TEXT
+        }))
+      : [];
+
+    return {
+      success: true,
+      rows: rows || [],
+      columns,
+      rowCount: rows?.length || 0,
+    };
+
+  } catch (error) {
+    // Log the error (but don't expose sensitive details)
+    console.error('SQLite query execution failed:', error);
+    
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      rows: [],
+      columns: [],
+      rowCount: 0,
+    };
+  } finally {
+    // Always clean up the connection
+    if (db) {
+      try {
+        await db.close();
+      } catch (cleanupError) {
+        console.error('Error closing SQLite connection:', cleanupError);
+      }
+    }
+  }
+};
