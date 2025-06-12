@@ -10,6 +10,7 @@ import type {
 /* ---------- Engine-specific configs ---------- */
 import { MySQLConfigSchema } from '../engines/mysql.js';
 import { SQLiteConfigSchema } from '../engines/sqlite.js';
+import { DuckDBConfigSchema } from '../engines/duckdb.js';
 
 /* ---------- Column & table ---------- */
 export const ColumnMetaSchema: z.ZodSchema<ColumnMeta> = z.object({
@@ -52,6 +53,12 @@ export const DatabaseStateSchema: z.ZodSchema<DatabaseState> = z.discriminatedUn
     name: z.string(),
     engine: z.literal('sqlite'),
     config: SQLiteConfigSchema.omit({type: true}),
+    schemas: z.record(SchemaStateSchema)
+  }),
+  z.object({
+    name: z.string(),
+    engine: z.literal('duckdb'),
+    config: DuckDBConfigSchema.omit({type: true}),
     schemas: z.record(SchemaStateSchema)
   })
 ]);

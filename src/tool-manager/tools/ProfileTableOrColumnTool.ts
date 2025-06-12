@@ -9,6 +9,7 @@ import { executeSQLiteQuery, generateSQLiteProfilingQueries } from "../../engine
 import type { SQLiteConfig } from "../../engines/sqlite.js";
 import { hasMySQLTable, hasMySQLColumn } from "../../engines/mysql.js";
 import { hasSQLiteTable, hasSQLiteColumn } from "../../engines/sqlite.js";
+import { hasDuckDBTable, hasDuckDBColumn, type DuckDBConfig, executeDuckDBQuery, generateDuckDBProfilingQueries } from "../../engines/duckdb.js";
 
 const DESCRIPTION = `Generate comprehensive exploratory data analysis (EDA) and modeling statistics for a table or specific column.
 
@@ -43,7 +44,7 @@ Modeling Insights:
 - Distribution characteristics for feature engineering
 
 Database Support:
-- MySQL and SQLite engines with engine-specific optimizations
+- MySQL, SQLite, and DuckDB engines with engine-specific optimizations
 - Automatic query safety validation and read-only enforcement
 - Results limited to prevent context window overflow
 
@@ -58,7 +59,7 @@ const ProfileTableOrColumnSchema = {
     columnName: z.string().optional(),
 };
 
-type EngineConfigUnion = MySQLConfig | SQLiteConfig;
+type EngineConfigUnion = MySQLConfig | SQLiteConfig | DuckDBConfig;
 
 export function createProfileTableOrColumnTool(stateManager: StateManager) {
   return {
@@ -129,6 +130,8 @@ const hasTable = async (config: EngineConfigUnion, tableName: string) => {
         return await hasMySQLTable(config, tableName);
     } else if (config.type === 'sqlite') {
         return await hasSQLiteTable(config, tableName);
+    } else if (config.type === 'duckdb') {
+        return await hasDuckDBTable(config, tableName);
     }
     throw new McpError(32003, `Unsupported engine type: ${JSON.stringify(config, null, 2)}`);
 }
@@ -138,6 +141,8 @@ const hasColumn = async (config: EngineConfigUnion, tableName: string, columnNam
         return await hasMySQLColumn(config, tableName, columnName);
     } else if (config.type === 'sqlite') {
         return await hasSQLiteColumn(config, tableName, columnName);
+    } else if (config.type === 'duckdb') {
+        return await hasDuckDBColumn(config, tableName, columnName);
     }
     throw new McpError(32003, `Unsupported engine type: ${JSON.stringify(config, null, 2)}`);
 }
@@ -147,6 +152,8 @@ const generateProfilingQueries = (tableName: string, columnName: string | undefi
         return generateMySQLProfilingQueries(tableName, columnName);
     } else if (engine === 'sqlite') {
         return generateSQLiteProfilingQueries(tableName, columnName);
+    } else if (engine === 'duckdb') {
+        return generateDuckDBProfilingQueries(tableName, columnName);
     } else {
         throw new McpError(32003, `Unsupported engine type: ${engine}`);
     }
@@ -292,6 +299,8 @@ const executeQuery = async (query: string, engineConfig: EngineConfigUnion) => {
         return await executeMySQLQuery(query, engineConfig);
     } else if (engineConfig.type === 'sqlite') {
         return await executeSQLiteQuery(query, engineConfig);
+    } else if (engineConfig.type === 'duckdb') {
+        return await executeDuckDBQuery(query, engineConfig);
     } else {
         throw new McpError(32003, `Unsupported engine type: ${JSON.stringify(engineConfig, null, 2)}`);
     }

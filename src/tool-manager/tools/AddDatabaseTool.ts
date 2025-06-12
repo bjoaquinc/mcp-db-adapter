@@ -2,8 +2,10 @@ import type { ToolDefinition } from "../ToolManager.js";
 import type { StateManager } from "../../state-manager/StateManager.js";
 import { MySQLConfigSchema, checkMySqlConnection } from "../../engines/mysql.js";
 import { SQLiteConfigSchema, checkSqliteConnection } from "../../engines/sqlite.js";
+import { DuckDBConfigSchema, checkDuckDBConnection } from "../../engines/duckdb.js";
 import type { MySQLConfig } from "../../engines/mysql.js";
 import type { SQLiteConfig } from "../../engines/sqlite.js";
+import type { DuckDBConfig } from "../../engines/duckdb.js";
 import { z } from "zod";
 import { McpError } from "@modelcontextprotocol/sdk/types.js";
 
@@ -21,7 +23,13 @@ For MySQL databases:
 
 For SQLite databases:
 - Requires: file path to the database file
-- Example: { type: "sqlite", path: "/path/to/database.db" }
+- Optional: readonly mode
+- Example: { type: "sqlite", file: "/path/to/database.db", readonly: false }
+
+For DuckDB databases:
+- Optional: file path (uses in-memory database if omitted)
+- Optional: readonly mode and configuration options
+- Example: { type: "duckdb", file: "/path/to/database.db", readonly: false }
 
 The tool will test the connection before adding it to ensure it's accessible and properly configured.
 Once successfully added, the database can be referenced by its name in other database operations.`;
@@ -30,11 +38,12 @@ const AddDatabaseSchema = {
   name: z.string(),
   config: z.union([
     MySQLConfigSchema,
-    SQLiteConfigSchema
+    SQLiteConfigSchema,
+    DuckDBConfigSchema
   ]),
 };
 
-type DBConfig = MySQLConfig | SQLiteConfig
+type DBConfig = MySQLConfig | SQLiteConfig | DuckDBConfig
 
 
 
@@ -86,6 +95,10 @@ const checkDbConnection = async (config: DBConfig): Promise<boolean>  => {
 
   if (config.type === 'sqlite') {
     response = await checkSqliteConnection(config)
+  }
+
+  if (config.type === 'duckdb') {
+    response = await checkDuckDBConnection(config)
   }
 
   return response

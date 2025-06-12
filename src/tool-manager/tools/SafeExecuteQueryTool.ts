@@ -7,6 +7,8 @@ import { isMySQLQuerySafe, executeMySQLQuery } from "../../engines/mysql.js";
 import type { MySQLConfig } from "../../engines/mysql.js";
 import { isSQLiteQuerySafe, executeSQLiteQuery } from "../../engines/sqlite.js";
 import type { SQLiteConfig } from "../../engines/sqlite.js";
+import { executeDuckDBQuery, isDuckDBQuerySafe } from "../../engines/duckdb.js";
+import type { DuckDBConfig } from "../../engines/duckdb.js";
 
 const DESCRIPTION = `Execute a safe, read-only SQL query on a configured database connection.
 
@@ -21,7 +23,7 @@ Query Safety Features:
 - Automatically validates query is read-only (SELECT statements only)
 - Prevents destructive operations (INSERT, UPDATE, DELETE, DROP, etc.)
 - Automatically adds LIMIT 100 to SELECT queries if no LIMIT is specified
-- Engine-specific safety validation for MySQL and SQLite
+- Engine-specific safety validation for MySQL, SQLite, and DuckDB  
 
 Examples:
 - SELECT * FROM users WHERE active = 1
@@ -37,7 +39,7 @@ const SafeExecuteQuerySchema = {
     // TODO: add a query type: sql, javascript, python, etc.
 };
 
-type EnginConfigUnion = MySQLConfig | SQLiteConfig;
+type EnginConfigUnion = MySQLConfig | SQLiteConfig | DuckDBConfig;
 
 export function createSafeExecuteQueryTool(stateManager: StateManager) {
   return {
@@ -90,6 +92,8 @@ const isSafeQuery = (query: string, engineType: DatabaseEngine) => {
         return isMySQLQuerySafe(query);
     } else if (engineType === 'sqlite') {
         return isSQLiteQuerySafe(query);
+    } else if (engineType === 'duckdb') {
+        return isDuckDBQuerySafe(query);
     } else {
         throw new McpError(32003, `Unsupported engine type: ${engineType}`);
     }
@@ -107,6 +111,8 @@ const executeQuery = async (query: string, engineConfig: EnginConfigUnion) => {
         return await executeMySQLQuery(limitedQuery, engineConfig);
     } else if (engineConfig.type === 'sqlite') {
         return await executeSQLiteQuery(limitedQuery, engineConfig);
+    } else if (engineConfig.type === 'duckdb') {
+        return await executeDuckDBQuery(limitedQuery, engineConfig);
     } else {
         throw new McpError(32003, `Unsupported engine type: ${JSON.stringify(engineConfig, null, 2)}`);
     }

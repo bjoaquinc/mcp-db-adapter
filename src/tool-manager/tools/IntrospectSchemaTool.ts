@@ -1,9 +1,8 @@
 import type { ToolDefinition } from "../ToolManager.js";
 import type { StateManager } from "../../state-manager/StateManager.js";
-import { getMySqlSchema } from "../../engines/mysql.js";
-import { DEFAULT_SQLITE_SCHEMA_NAME, getSqliteSchema } from "../../engines/sqlite.js";
-import type { MySQLConfig } from "../../engines/mysql.js";
-import type { SQLiteConfig } from "../../engines/sqlite.js";
+import { DEFAULT_SQLITE_SCHEMA_NAME, getSqliteSchema, type SQLiteConfig } from "../../engines/sqlite.js";
+import {getMySqlSchema, type MySQLConfig } from "../../engines/mysql.js";
+import { getDuckDBSchema, type DuckDBConfig } from "../../engines/duckdb.js";
 import { z } from "zod";
 import { SchemaState } from "../../state-manager/StateManagerTypes.js";
 import { McpError } from "@modelcontextprotocol/sdk/types.js";
@@ -25,7 +24,8 @@ Schema Information Retrieved:
 
 Database Support:
 - MySQL: Retrieves schema from the specified database name
-- SQLite: Analyzes the main database schema structure
+- SQLite: Analyzes the main database schema structure  
+- DuckDB: Analyzes the main database schema structure
 
 Returns:
 - Complete schema structure in JSON format
@@ -45,7 +45,7 @@ const IntrospectSchemaSchema = {
   name: z.string()
 };
 
-type DBConfig = MySQLConfig | SQLiteConfig
+type DBConfig = MySQLConfig | SQLiteConfig | DuckDBConfig
 
 
 
@@ -116,6 +116,10 @@ const fetchSchemaFromDb = async (schemaName: string, config: DBConfig): Promise<
 
   if (config.type === 'sqlite') {
     response = await getSqliteSchema(config)
+  }
+
+  if (config.type === 'duckdb') {
+    response = await getDuckDBSchema(config)
   }
 
   return response

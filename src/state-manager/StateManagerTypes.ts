@@ -1,12 +1,13 @@
 // Engine config types
 import type { MySQLConfig } from '../engines/mysql.js';
 import type { SQLiteConfig } from '../engines/sqlite.js';
+import type { DuckDBConfig } from '../engines/duckdb.js';
 
 export interface State {
     dbs: Record<string, DatabaseState>;
 }
 
-export type DatabaseEngine = 'mysql' | 'sqlite';
+export type DatabaseEngine = 'mysql' | 'sqlite' | 'duckdb';
 
 
 
@@ -54,4 +55,5 @@ export interface TableStats  { rowCount: number;    sizeMB?: number;   }
 type EngineConfig<E extends DatabaseEngine> =
     E extends 'mysql'  ? Omit<MySQLConfig, 'type'>  :
     E extends 'sqlite' ? Omit<SQLiteConfig, 'type'> :
+    E extends 'duckdb' ? Omit<DuckDBConfig, 'type'> :
     never;
