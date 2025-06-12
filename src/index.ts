@@ -5,6 +5,7 @@ import { StateManager } from "./state-manager/StateManager.js";
 import { createIntrospectSchemaTool } from "./tool-manager/tools/IntrospectSchemaTool.js";
 import { createListDatabasesTool } from "./tool-manager/tools/ListDatabasesTool.js";
 import { createSafeExecuteQueryTool } from "./tool-manager/tools/SafeExecuteQueryTool.js";
+import { createProfileTableOrColumnTool } from "./tool-manager/tools/ProfileTableOrColumnTool.js";
 
 const initalize = async () => {
 
@@ -21,6 +22,7 @@ const initalize = async () => {
     toolManager.addTool(createIntrospectSchemaTool(stateManager))
     toolManager.addTool(createListDatabasesTool(stateManager))
     toolManager.addTool(createSafeExecuteQueryTool(stateManager))
+    toolManager.addTool(createProfileTableOrColumnTool(stateManager))
 
     // connect to transport
     await connectToTransport(server);
