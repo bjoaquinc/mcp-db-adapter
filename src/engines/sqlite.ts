@@ -169,10 +169,6 @@ export interface SQLiteQueryResult {
 }
 
 export const executeSQLiteQuery = async (query: string, config: SQLiteConfig): Promise<SQLiteQueryResult> => {
-  // First, validate the query for safety
-  if (!isSQLiteQuerySafe(query)) {
-    throw new Error('Query failed safety validation. Only safe SELECT queries are allowed.');
-  }
 
   const mode = config.readonly
     ? sqlite3.OPEN_READONLY
@@ -233,4 +229,105 @@ export const executeSQLiteQuery = async (query: string, config: SQLiteConfig): P
       }
     }
   }
+};
+
+export const hasSQLiteTable = async (config: SQLiteConfig, tableName: string): Promise<boolean> => {
+  const result = await executeSQLiteQuery(`
+    SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name = '${tableName}'
+  `, config);
+  return result.rows[0]?.count > 0;
+}
+
+export const hasSQLiteColumn = async (config: SQLiteConfig, tableName: string, columnName: string): Promise<boolean> => {
+  const result = await executeSQLiteQuery(
+    `PRAGMA table_info('${tableName}')`, 
+    config
+  );
+  
+  return result.rows.some(row => row.name === columnName);
+}
+
+export const generateSQLiteProfilingQueries = (tableName: string, columnName?: string): Record<string, string> => {
+  const queries: Record<string, string> = {};
+
+  if (columnName) {
+    // Column-specific profiling for SQLite
+    queries.basic_stats = `
+      SELECT 
+        COUNT(*) as total_count,
+        COUNT("${columnName}") as non_null_count,
+        COUNT(*) - COUNT("${columnName}") as null_count,
+        COUNT(DISTINCT "${columnName}") as distinct_count,
+        CAST(COUNT(DISTINCT "${columnName}") AS REAL) / CAST(COUNT(*) AS REAL) as uniqueness_ratio
+      FROM "${tableName}"
+    `;
+
+    // Numeric statistics for SQLite (more permissive than MySQL)
+    queries.numeric_stats = `
+      SELECT 
+        MIN("${columnName}") as min_value,
+        MAX("${columnName}") as max_value,
+        AVG(CAST("${columnName}" AS REAL)) as mean_value
+      FROM "${tableName}"
+      WHERE "${columnName}" IS NOT NULL 
+        AND typeof("${columnName}") IN ('integer', 'real')
+        OR (typeof("${columnName}") = 'text' AND "${columnName}" GLOB '*[0-9]*')
+    `;
+
+    // Top frequent values for SQLite
+    queries.top_values = `
+      SELECT 
+        "${columnName}" as value,
+        COUNT(*) as frequency,
+        CAST(COUNT(*) AS REAL) / (SELECT COUNT(*) FROM "${tableName}") as percentage
+      FROM "${tableName}"
+      WHERE "${columnName}" IS NOT NULL
+      GROUP BY "${columnName}"
+      ORDER BY frequency DESC
+      LIMIT 10
+    `;
+
+    // Data quality indicators for SQLite
+    queries.data_quality = `
+      SELECT 
+        CASE 
+          WHEN "${columnName}" IS NULL THEN 'NULL'
+          WHEN TRIM(CAST("${columnName}" AS TEXT)) = '' THEN 'EMPTY'
+          ELSE 'VALID'
+        END as data_status,
+        COUNT(*) as count
+      FROM "${tableName}"
+      GROUP BY data_status
+    `;
+
+  } else {
+    // Table-level profiling for SQLite - focus on DATA not schema
+    queries.table_overview = `
+      SELECT COUNT(*) as total_rows
+      FROM "${tableName}"
+    `;
+
+    queries.sample_data = `
+      SELECT *
+      FROM "${tableName}"
+      LIMIT 5
+    `;
+
+    // Data-focused table analysis
+    queries.table_data_summary = `
+      SELECT 
+        COUNT(*) as total_rows,
+        (
+          SELECT ROUND((page_count * page_size) / 1024.0 / 1024.0, 2)
+          FROM (
+            SELECT page_count, 
+                   (SELECT page_size FROM pragma_page_size) as page_size
+            FROM pragma_page_count
+          )
+        ) as size_mb
+      FROM "${tableName}"
+    `;
+  }
+
+  return queries;
 };

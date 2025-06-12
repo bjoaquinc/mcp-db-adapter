@@ -247,3 +247,97 @@ export const executeMySQLQuery = async (query: string, config: MySQLConfig): Pro
     }
   }
 }
+
+export const hasMySQLTable = async (config: MySQLConfig, tableName: string): Promise<boolean> => {
+  const result = await executeMySQLQuery(`
+    SELECT COUNT(*) as count FROM information_schema.tables WHERE table_name = '${tableName}'
+  `, config);
+  return result.rows[0]?.count > 0;
+}
+
+export const hasMySQLColumn = async (config: MySQLConfig, tableName: string, columnName: string): Promise<boolean> => {
+  const result = await executeMySQLQuery(`
+    SELECT COUNT(*) as count FROM information_schema.columns WHERE table_name = '${tableName}' AND column_name = '${columnName}'
+  `, config);
+  return result.rows[0]?.count > 0;
+}
+
+export const generateMySQLProfilingQueries = (tableName: string, columnName?: string): Record<string, string> => {
+  const queries: Record<string, string> = {};
+
+  if (columnName) {
+    // Column-specific profiling for MySQL
+    queries.basic_stats = `
+      SELECT 
+        COUNT(*) as total_count,
+        COUNT(${columnName}) as non_null_count,
+        COUNT(*) - COUNT(${columnName}) as null_count,
+        COUNT(DISTINCT ${columnName}) as distinct_count,
+        CAST(COUNT(DISTINCT ${columnName}) AS DECIMAL(10,4)) / CAST(COUNT(*) AS DECIMAL(10,4)) as uniqueness_ratio
+      FROM ${tableName}
+    `;
+
+    // Numeric statistics for MySQL
+    queries.numeric_stats = `
+      SELECT 
+        MIN(${columnName}) as min_value,
+        MAX(${columnName}) as max_value,
+        AVG(CAST(${columnName} AS DECIMAL(10,4))) as mean_value,
+        STDDEV(CAST(${columnName} AS DECIMAL(10,4))) as std_dev
+      FROM ${tableName}
+      WHERE ${columnName} IS NOT NULL 
+        AND ${columnName} REGEXP '^[+-]?[0-9]*\.?[0-9]+([eE][+-]?[0-9]+)?$'
+    `;
+
+    // Top frequent values for MySQL
+    queries.top_values = `
+      SELECT 
+        ${columnName} as value,
+        COUNT(*) as frequency,
+        CAST(COUNT(*) AS DECIMAL(10,4)) / (SELECT COUNT(*) FROM ${tableName}) as percentage
+      FROM ${tableName}
+      WHERE ${columnName} IS NOT NULL
+      GROUP BY ${columnName}
+      ORDER BY frequency DESC
+      LIMIT 10
+    `;
+
+    // Data quality indicators for MySQL
+    queries.data_quality = `
+      SELECT 
+        CASE 
+          WHEN ${columnName} IS NULL THEN 'NULL'
+          WHEN TRIM(CAST(${columnName} AS CHAR)) = '' THEN 'EMPTY'
+          ELSE 'VALID'
+        END as data_status,
+        COUNT(*) as count
+      FROM ${tableName}
+      GROUP BY data_status
+    `;
+
+  } else {
+    // Table-level profiling for MySQL - focus on DATA not schema
+    queries.table_overview = `
+      SELECT COUNT(*) as total_rows
+      FROM ${tableName}
+    `;
+
+    queries.sample_data = `
+      SELECT *
+      FROM ${tableName}
+      LIMIT 5
+    `;
+
+    // Data-focused table analysis
+    queries.table_data_summary = `
+      SELECT 
+        COUNT(*) as total_rows,
+        ROUND((DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024, 2) as size_mb
+      FROM INFORMATION_SCHEMA.TABLES 
+      WHERE TABLE_NAME = '${tableName}' 
+        AND TABLE_SCHEMA = DATABASE()
+    `;
+  }
+
+  return queries;
+};
