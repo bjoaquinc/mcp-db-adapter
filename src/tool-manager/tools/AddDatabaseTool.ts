@@ -11,7 +11,7 @@ import { McpError } from "@modelcontextprotocol/sdk/types.js";
 
 const DESCRIPTION = `Add and configure a new database connection for SQL queries and data operations.
 
-This tool establishes a secure connection to MySQL or SQLite databases, validates the connection, 
+This tool establishes a secure connection to MySQL, SQLite, or DuckDB databases, validates the connection, 
 and makes the database available for subsequent query operations.
 
 @param {string} name - Unique identifier for this database connection
